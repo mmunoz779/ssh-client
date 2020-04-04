@@ -1,0 +1,19 @@
+This file contains links relating to the project such as libraries, RFCs, and tutorials as well as a short description
+of why each was included
+
+- https://docs.python.org/2/extending/extending.html
+	Documentation describing how to extend python using C/C++, potentially helpful for creating the packets using C
+	syntax directly
+
+- https://tools.ietf.org/html/rfc4253
+	RFC defining the general SSH protocol and initial handshaking/cryptographic negotiation
+
+- https://tools.ietf.org/html/rfc4254
+	RFC defining the methods that SSH supports such as remote login/executing and x11 forwarding
+
+- https://tools.ietf.org/html/rfc4255
+	Defines how to verify SSH keys using DNS security
+
+- https://tools.ietf.org/html/rfc4256
+	Describes the generic message exchange authentication for interactive authentication requiring keyboard input
+	without knowing the actual authentication mechanism

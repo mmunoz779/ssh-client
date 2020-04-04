@@ -42,9 +42,18 @@ class TCPConnection:
         self.client_socket.close()
 
     def connect(self) -> None:
+        """
+        Connects to the destination over the specified port
+        :return: None
+        """
         self.client_socket.connect(self.serverTuple)
 
     def handshake(self):
+        """
+        Perform the initial SSH handshake
+        :raises SSHException: Indicates that a non-recoverable exception occurred during the handshake
+        :return: None
+        """
         self.client_socket.send(self.identifier_string.encode())
         ret = self.client_socket.recv(2048)
         print(ret.decode())
