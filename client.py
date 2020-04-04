@@ -38,12 +38,16 @@ class TCPConnection:
         except BaseException as err:
             print(f'Unexpected error occurred, exiting...\n{err}', file=sys.stderr)
             sys.exit(2)
+        input('Press enter to close connection')
+        self.client_socket.close()
 
     def connect(self) -> None:
         self.client_socket.connect(self.serverTuple)
 
     def handshake(self):
-        pass
+        self.client_socket.send(self.identifier_string.encode())
+        ret = self.client_socket.recv(2048)
+        print(ret.decode())
 
     @staticmethod
     def main():
