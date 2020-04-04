@@ -17,3 +17,9 @@ of why each was included
 - https://tools.ietf.org/html/rfc4256
 	Describes the generic message exchange authentication for interactive authentication requiring keyboard input
 	without knowing the actual authentication mechanism
+
+- https://docs.python.org/2/library/os.html#os.urandom
+	Describes the os library's random function used for cryptographically secure random numbers
+
+- https://docs.python.org/2/library/struct.html
+	Documents the python struct library used to convert between python strings and c structs for building packets

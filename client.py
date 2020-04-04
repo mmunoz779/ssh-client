@@ -5,23 +5,9 @@ import os
 import Crypto.Cipher as ciphers
 from Crypto.Util import Padding
 from exceptions import *
-import ctypes
 
 
-class SSHPacket:
-    """
-    uint32    packet_length
-    byte      padding_length
-    byte[n1]  payload; n1 = packet_length - padding_length - 1
-    byte[n2]  random padding; n2 = padding_length
-    byte[m]   mac (Message Authentication Code - MAC); m = mac_length
-    """
-
-    def __init__(self, payload):
-        pass
-
-
-class TCPConnection:
+class SSHConnection:
     # Set identifier string, don't include null char per RFC spec
     identifier_string = 'SSH-2.0-mmmunozSSH0.1\r\n'.split('\x00')[0]
 
@@ -60,6 +46,10 @@ class TCPConnection:
 
     @staticmethod
     def main():
+        """
+        Initiates the SSH connection with the specified program arguments
+        :return:
+        """
         arg_parser = argparse.ArgumentParser()
         required = arg_parser.add_argument_group('Required arguments')
         required.add_argument('-d', '--destination', help='Destination IP address or hostname', required=True)
@@ -68,8 +58,9 @@ class TCPConnection:
                                 help='The port to connect to on the remote server. Defaults to 22.')
         args = arg_parser.parse_args()
         port = args.port or 22
-        connection = TCPConnection(destination=args.destination, port=port, username=args.username)
+        connection = SSHConnection(destination=args.destination, port=port, username=args.username)
 
 
+# Run the class if called directly, otherwise allow other file to import class
 if __name__ == '__main__':
-    TCPConnection.main()
+    SSHConnection.main()
