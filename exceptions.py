@@ -1,0 +1,2 @@
+class SSHException(Exception):
+    pass
