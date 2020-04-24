@@ -5,24 +5,31 @@ import os
 import Crypto.Cipher as ciphers
 from Crypto.Util import Padding
 from exceptions import *
+from packets import *
+from utils import *
+from KEX.dh_group1 import DHGroup1
+from Authentication import ssh_rsa
 
 
 class SSHConnection:
-    # Set identifier string, don't include null char per RFC spec
-    identifier_string = 'SSH-2.0-mmmunozSSH0.1\r\n'.split('\x00')[0]
 
     def __init__(self, destination, port, username):
+        self.running = False
         self.client_socket = soc.socket(soc.AF_INET, soc.SOCK_STREAM)
         self.username = username
         self.serverTuple = (destination, port)
+        self.server_version = None
+        self.packet_gen = PacketGenerator(self.client_socket)
         self.connect()
         try:
-            self.handshake()
+            self.run()
         except SSHException as err:
             print(f'Fatal error occurred, exiting...\n{err}', file=sys.stderr)
+            self.client_socket.close()
             sys.exit(1)
         except BaseException as err:
             print(f'Unexpected error occurred, exiting...\n{err}', file=sys.stderr)
+            self.client_socket.close()
             sys.exit(2)
         input('Press enter to close connection')
         self.client_socket.close()
@@ -34,15 +41,44 @@ class SSHConnection:
         """
         self.client_socket.connect(self.serverTuple)
 
-    def handshake(self):
+    def run(self):
         """
         Perform the initial SSH handshake
         :raises SSHException: Indicates that a non-recoverable exception occurred during the handshake
         :return: None
         """
-        self.client_socket.send(self.identifier_string.encode())
+        server_kex_init = None
+        self.running = True
+        self.client_socket.send(client_version.encode())
         ret = self.client_socket.recv(2048)
-        print(ret.decode())
+        self.server_version = ret.decode()
+        print(f'Server version: {self.server_version}')
+        print(f'Sending KEX_INIT packet')
+        client_kex_packet = BinaryPacket(KEXInitPacket().get_packet())
+        self.client_socket.send(bytes(client_kex_packet))
+        while self.running:
+            try:
+                print(f'Receiving packet')
+                packet_type, packet = self.packet_gen.receive_binary_packet()
+                print(f'Packet type: {packet_type} Data: {str(packet)}')
+            except ValueError as v:
+                self.running = False
+                raise SSHException(f'Unexpected packet received, ending session.\nException info: {str(v)}')
+            if packet_type == SSH_MSG_KEX_INIT:
+                server_kex_init = packet
+                self.packet_gen.parse_kex_init_packet(packet.payload)
+                kex_packet = DHGroup1().get_dhkex_init_packet()
+                self.client_socket.send(bytes(kex_packet))
+            elif packet_type == SSH_MSG_KEXDH_REPLY:
+                self.running = False
+                kex_packet = DHGroup1().parse_dhkex_reply_packet(packet, self.server_version, client_kex_packet.payload,
+                                                                 server_kex_init.payload)
+            elif packet_type == SSH_MSG_DISCONNECT:
+                self.running = False
+                print(f'Disconnect received, ending connection')
+            else:
+                self.running = False
+                print(f'Unknown SSH packet type {packet_type}, ending session')
 
     @staticmethod
     def main():
