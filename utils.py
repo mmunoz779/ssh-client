@@ -1,4 +1,7 @@
+import struct
 import sys
+from Crypto.Util.number import *
+from typing import Union
 
 # Set identifier string
 client_version = 'SSH-2.0-mwmunozSSH0.1\r\n'
@@ -42,3 +45,24 @@ def prompt_user(prompt: str) -> bool:
             return False
         else:
             print("Please respond with 'yes' or 'no'\n", file=sys.stderr)
+
+
+def as_mpint(num: Union[int, bytes]) -> bytes:
+    if type(num) == int:
+        return struct.pack('!L', ceil_div(size(num), 8)) + num.to_bytes(ceil_div(size(num), 8), 'big')
+    else:
+        return struct.pack('!L', len(num)) + num
+
+
+def as_ssh_string(string: Union[str, bytes]) -> bytes:
+    return struct.pack('!L', len(string)) + (string.encode('utf-8') if type(string) == str else string)
+
+
+def get_mpint(num: bytes) -> int:
+    num_len = struct.unpack('!L', num[:4])[0]
+    return int.from_bytes(num[4:5 + num_len], 'big')
+
+
+def get_ssh_string(string: bytes) -> str:
+    string_len = struct.unpack('!L', string[:4])[0]
+    return string[4:5 + string_len].decode('utf-8')

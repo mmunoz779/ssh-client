@@ -20,6 +20,15 @@ class SSHConnection:
         self.serverTuple = (destination, port)
         self.server_version = None
         self.packet_gen = PacketGenerator(self.client_socket)
+        self.key = None  # type: Union[int, None]
+
+        self.iv_c2s = None
+        self.iv_s2c = None
+        self.enc_c2s = None
+        self.enc_s2c = None
+        self.int_c2s = None
+        self.int_s2c = None
+
         self.connect()
         try:
             self.run()
@@ -48,6 +57,8 @@ class SSHConnection:
         :return: None
         """
         server_kex_init = None
+        dh_group = DHGroup1()
+        dh_group.generate_x()
         self.running = True
         self.client_socket.send(client_version.encode())
         ret = self.client_socket.recv(2048)
@@ -67,18 +78,26 @@ class SSHConnection:
             if packet_type == SSH_MSG_KEX_INIT:
                 server_kex_init = packet
                 self.packet_gen.parse_kex_init_packet(packet.payload)
-                kex_packet = DHGroup1().get_dhkex_init_packet()
+                kex_packet = dh_group.get_dhkex_init_packet()
                 self.client_socket.send(bytes(kex_packet))
             elif packet_type == SSH_MSG_KEXDH_REPLY:
-                self.running = False
-                kex_packet = DHGroup1().parse_dhkex_reply_packet(packet, self.server_version, client_kex_packet.payload,
-                                                                 server_kex_init.payload)
+                self.iv_c2s, self.iv_s2c, self.enc_c2s, self.enc_s2c, self.int_c2s, \
+                self.int_s2c = dh_group.parse_dhkex_reply_packet(packet,
+                                                                 self.server_version,
+                                                                 client_kex_packet.payload,
+                                                                 server_kex_init.payload,
+                                                                 self.serverTuple[0])
+            elif packet_type == SSH_MSG_NEW_KEYS:
+                self.packet_gen.send_newkeys(self.iv_c2s, self.iv_s2c, self.enc_c2s, self.enc_s2c,
+                                             self.int_c2s, self.int_s2c)
+                self.packet_gen.send_auth_request(self.username)
             elif packet_type == SSH_MSG_DISCONNECT:
                 self.running = False
                 print(f'Disconnect received, ending connection')
             else:
                 self.running = False
                 print(f'Unknown SSH packet type {packet_type}, ending session')
+        self.client_socket.close()
 
     @staticmethod
     def main():
